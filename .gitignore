@@ -9,6 +9,8 @@ instance/
 htmlcov/
 .DS_Store
 reports/
+.scannerwork/
+dist/
 coverage.xml
 
 # Assignment brief (not part of the code)

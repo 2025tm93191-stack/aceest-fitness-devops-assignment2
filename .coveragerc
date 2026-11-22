@@ -1,0 +1,14 @@
+[run]
+# Relative paths in coverage.xml so SonarQube can match them to the sources
+# no matter which directory (Jenkins workspace, container) the tests ran in.
+relative_files = True
+source = .
+omit =
+    tests/*
+    legacy_versions/*
+    .venv/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
