@@ -1,6 +1,9 @@
 import pytest
 
-from fitness.calculations import calculate_bmi, estimate_calories, validate_adherence
+from fitness.calculations import (
+    calculate_bmi, estimate_calories, optional_number, positive_int, validate_adherence, validate_exercise,
+    validate_metrics,
+)
 
 
 @pytest.mark.parametrize("program, expected", [("FL", 1760), ("MG", 2800), ("BG", 2080)])
@@ -49,3 +52,28 @@ def test_adherence_accepts_valid_range(value):
 def test_adherence_rejects_invalid(value):
     with pytest.raises(ValueError):
         validate_adherence(value)
+
+
+# ---------- v2.0 validators ----------
+@pytest.mark.parametrize("value", [0, -1, 2.5, "3", True, None])
+def test_positive_int_rejects(value):
+    with pytest.raises(ValueError):
+        positive_int(value, "sets")
+
+
+def test_optional_number_bounds():
+    assert optional_number(None, "x") is None
+    assert optional_number("20.5", "x", high=100) == 20.5
+    for bad in (0, 100, "abc", True):
+        with pytest.raises(ValueError):
+            optional_number(bad, "x", high=100)
+
+
+def test_validate_metrics_defaults():
+    assert validate_metrics({"weight": 70}) == {"weight": 70.0, "waist": None, "bodyfat": None}
+
+
+def test_validate_exercise_bodyweight_and_errors():
+    assert validate_exercise({"name": " Dips ", "sets": 3, "reps": 10, "weight": 0})["name"] == "Dips"
+    with pytest.raises(ValueError):
+        validate_exercise({"name": "Dips", "sets": 3, "reps": 10, "weight": False})
