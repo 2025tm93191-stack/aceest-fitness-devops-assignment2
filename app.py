@@ -1,15 +1,17 @@
 """ACEest Fitness & Gym - Flask web application."""
 
 import os
+import secrets
 import socket
 import sqlite3
 from datetime import date
 
 from flask import Flask, jsonify, render_template, request
 
-from fitness import db
-from fitness.calculations import calculate_bmi, estimate_calories, validate_adherence
+from fitness import auth, db, tracking
+from fitness.calculations import calculate_bmi, estimate_calories, optional_number, validate_adherence
 from fitness.programs import PROGRAMS, get_program, list_programs
+from fitness.responses import error
 
 VERSION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
 
@@ -30,7 +32,13 @@ def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_mapping(
         APP_VERSION=read_version(),
+        # Deployment track (stable / canary / blue / green / ...) set per Kubernetes Deployment.
+        APP_TRACK=os.environ.get("APP_TRACK", "default"),
         DATABASE=os.environ.get("ACEEST_DB", os.path.join(app.instance_path, "aceest.db")),
+        # Must be shared by every replica so tokens issued by one pod are accepted by the others.
+        SECRET_KEY=os.environ.get("ACEEST_SECRET_KEY") or secrets.token_hex(32),
+        # Password for the built-in 'admin' account; no admin is created when unset.
+        ADMIN_PASSWORD=os.environ.get("ACEEST_ADMIN_PASSWORD"),
     )
     if test_config:
         app.config.update(test_config)
@@ -39,17 +47,12 @@ def create_app(test_config=None):
     app.teardown_appcontext(db.close_db)
     with app.app_context():
         db.init_db()
+        auth.ensure_admin()
 
     register_routes(app)
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(tracking.bp)
     return app
-
-
-def error(message, status=400):
-    return jsonify({"error": message}), status
-
-
-def client_exists(conn, name):
-    return conn.execute("SELECT 1 FROM clients WHERE name = ?", (name,)).fetchone() is not None
 
 
 def register_routes(app):
@@ -64,7 +67,8 @@ def register_routes(app):
     @app.get("/version")
     def version():
         # hostname = pod name in Kubernetes, so canary / blue-green traffic splits are visible
-        return jsonify({"version": app.config["APP_VERSION"], "hostname": socket.gethostname()})
+        return jsonify({"version": app.config["APP_VERSION"], "track": app.config["APP_TRACK"],
+                        "hostname": socket.gethostname()})
 
     # ---------- Programs ----------
     @app.get("/api/programs")
@@ -111,6 +115,12 @@ def register_routes(app):
             return error("name is required")
         program = data.get("program")
         calories_value = None
+        try:
+            target_weight = optional_number(data.get("target_weight"), "target_weight")
+            target_adherence = (None if data.get("target_adherence") is None
+                                else validate_adherence(data["target_adherence"]))
+        except ValueError as exc:
+            return error(str(exc))
         if program is not None:
             if get_program(program) is None:
                 return error(f"Unknown program '{program}'")
@@ -123,10 +133,10 @@ def register_routes(app):
         conn = db.get_db()
         try:
             conn.execute(
-                "INSERT INTO clients (name, age, height, weight, program, calories, membership_end)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (name, data.get("age"), data.get("height"), data.get("weight"),
-                 program, calories_value, data.get("membership_end")),
+                "INSERT INTO clients (name, age, height, weight, program, calories,"
+                " target_weight, target_adherence, membership_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (name, data.get("age"), data.get("height"), data.get("weight"), program,
+                 calories_value, target_weight, target_adherence, data.get("membership_end")),
             )
             conn.commit()
         except sqlite3.IntegrityError:
@@ -162,7 +172,7 @@ def register_routes(app):
     @app.route("/api/clients/<name>/progress", methods=["GET", "POST"])
     def progress(name):
         conn = db.get_db()
-        if not client_exists(conn, name):
+        if not db.client_exists(conn, name):
             return error(f"Client '{name}' not found", 404)
         if request.method == "POST":
             data = request.get_json(silent=True) or {}
@@ -190,7 +200,7 @@ def register_routes(app):
     @app.route("/api/clients/<name>/workouts", methods=["GET", "POST"])
     def workouts(name):
         conn = db.get_db()
-        if not client_exists(conn, name):
+        if not db.client_exists(conn, name):
             return error(f"Client '{name}' not found", 404)
         if request.method == "POST":
             data = request.get_json(silent=True) or {}
@@ -205,16 +215,16 @@ def register_routes(app):
                 date.fromisoformat(workout_date)
             except (TypeError, ValueError):
                 return error("date must be in YYYY-MM-DD format")
-            conn.execute(
+            cur = conn.execute(
                 "INSERT INTO workouts (client_name, date, workout_type, duration_min, notes)"
                 " VALUES (?, ?, ?, ?, ?)",
                 (name, workout_date, workout_type, duration, data.get("notes", "")),
             )
             conn.commit()
-            return jsonify({"client": name, "date": workout_date,
+            return jsonify({"id": cur.lastrowid, "client": name, "date": workout_date,
                             "workout_type": workout_type, "duration_min": duration}), 201
         rows = conn.execute(
-            "SELECT date, workout_type, duration_min, notes FROM workouts"
+            "SELECT id, date, workout_type, duration_min, notes FROM workouts"
             " WHERE client_name = ? ORDER BY date DESC", (name,)
         ).fetchall()
         return jsonify([dict(r) for r in rows])

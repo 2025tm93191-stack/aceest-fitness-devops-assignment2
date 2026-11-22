@@ -51,3 +51,50 @@ def validate_adherence(value):
     if not 0 <= adherence <= 100:
         raise ValueError("adherence must be between 0 and 100")
     return adherence
+
+
+def positive_int(value, field):
+    """A whole number greater than zero (booleans and floats are rejected)."""
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{field} must be a positive integer")
+    return value
+
+
+def optional_number(value, field, low=0.0, high=None):
+    """None stays None; otherwise a number in (low, high)."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"{field} must be a number")
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field} must be a number")
+    if number <= low or (high is not None and number >= high):
+        limit = f"between {low:g} and {high:g}" if high is not None else f"greater than {low:g}"
+        raise ValueError(f"{field} must be {limit}")
+    return number
+
+
+def validate_metrics(data):
+    """Body metrics from ACEest v2.2.4: weight is required, waist and body fat are optional."""
+    return {
+        "weight": _positive_number(data.get("weight"), "weight"),
+        "waist": optional_number(data.get("waist"), "waist"),
+        "bodyfat": optional_number(data.get("bodyfat"), "bodyfat", high=100),
+    }
+
+
+def validate_exercise(data):
+    name = str(data.get("name", "")).strip()
+    if not name:
+        raise ValueError("name is required")
+    weight = data.get("weight")  # None or 0 = bodyweight exercise
+    if isinstance(weight, bool) or weight not in (None, 0):
+        weight = optional_number(weight, "weight")
+    return {
+        "name": name,
+        "sets": positive_int(data.get("sets"), "sets"),
+        "reps": positive_int(data.get("reps"), "reps"),
+        "weight": weight,
+    }

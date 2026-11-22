@@ -1,5 +1,7 @@
 """Training program catalogue, ported from the ACEest v1.x desktop scripts."""
 
+import secrets
+
 PROGRAMS = {
     "FL": {
         "name": "Fat Loss",
@@ -63,3 +65,24 @@ def get_program(code):
     if program is None:
         return None
     return {"code": key, **program}
+
+
+# Templates used by the "AI-style program generator" in ACEest v3.1.2 / v3.2.4.
+PLAN_TEMPLATES = {
+    "FL": ["Full Body HIIT", "Circuit Training", "Cardio + Weights"],
+    "MG": ["Push/Pull/Legs", "Upper/Lower Split", "Full Body Strength"],
+    "BG": ["Full Body 3x/week", "Light Strength + Mobility"],
+}
+
+
+def generate_plan(goal=None, chooser=secrets.choice):
+    """Pick a training split for a goal (program code); a random goal if none is given.
+
+    Returns (goal_code, plan). Raises ValueError for an unknown goal.
+    """
+    if goal is None:
+        goal = chooser(sorted(PLAN_TEMPLATES))
+    key = str(goal).strip().upper()
+    if key not in PLAN_TEMPLATES:
+        raise ValueError(f"Unknown program '{goal}'")
+    return key, chooser(PLAN_TEMPLATES[key])
