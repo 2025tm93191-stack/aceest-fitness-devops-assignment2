@@ -16,3 +16,11 @@ reports
 coverage.xml
 CLAUDE.md
 setup_git_history.sh
+legacy_versions
+k8s
+Screenshots
+docs
+sonar-project.properties
+.scannerwork
+dist
+*.docx
