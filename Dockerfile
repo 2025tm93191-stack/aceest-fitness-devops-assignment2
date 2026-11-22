@@ -22,20 +22,23 @@ RUN pip install -r requirements-dev.txt
 COPY . .
 RUN chown -R appuser:appuser /app
 USER appuser
-CMD ["pytest", "--cov=fitness", "--cov=app", "--cov-report=term-missing"]
+CMD ["pytest", "--cov", "--cov-report=term-missing"]
 
 # ---------- runtime: small, non-root production image (default target) ----------
 FROM base AS runtime
 COPY --from=deps /install /usr/local
-COPY app.py VERSION ./
+COPY app.py ACEest_Fitness.py VERSION ./
 COPY fitness/ fitness/
 COPY templates/ templates/
 RUN mkdir -p /app/instance && chown -R appuser:appuser /app
 # Optional override at build time: docker build --build-arg APP_VERSION=2.0.0 .
 ARG APP_VERSION=""
 ENV APP_VERSION=${APP_VERSION}
+LABEL org.opencontainers.image.title="aceest-fitness" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.source="https://github.com/2025tm93191-stack/aceest-fitness-devops-assignment2"
 USER appuser
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')" || exit 1
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--access-logfile", "-", "ACEest_Fitness:app"]
