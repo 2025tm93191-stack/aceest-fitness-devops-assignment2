@@ -2,7 +2,7 @@
 
 A Flask web application for ACEest Fitness & Gym, built from the baseline `Aceestver` Tkinter scripts, with automated quality gates in **GitHub Actions** and **Jenkins**.
 
-[![CI Pipeline](https://github.com/2025tm93191-stack/aceest-fitness-devops/actions/workflows/main.yml/badge.svg)](https://github.com/2025tm93191-stack/aceest-fitness-devops/actions/workflows/main.yml)
+[![CI Pipeline](https://github.com/2025tm93191-stack/aceest-fitness-devops-assignment2/actions/workflows/main.yml/badge.svg)](https://github.com/2025tm93191-stack/aceest-fitness-devops-assignment2/actions/workflows/main.yml)
 
 ## Features
 
@@ -15,7 +15,7 @@ A Flask web application for ACEest Fitness & Gym, built from the baseline `Acees
 ## Project Structure
 
 ```
-aceest-fitness-devops/
+aceest-fitness-devops-assignment2/
 ├── app.py                    # Flask app factory and routes
 ├── fitness/
 │   ├── programs.py           # Program catalogue and lookups
@@ -35,8 +35,8 @@ aceest-fitness-devops/
 Requires Python 3.12+.
 
 ```bash
-git clone https://github.com/2025tm93191-stack/aceest-fitness-devops.git
-cd aceest-fitness-devops
+git clone https://github.com/2025tm93191-stack/aceest-fitness-devops-assignment2.git
+cd aceest-fitness-devops-assignment2
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
