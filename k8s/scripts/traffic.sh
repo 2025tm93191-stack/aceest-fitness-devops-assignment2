@@ -14,6 +14,6 @@ shift $(( $# >= 3 ? 3 : 2 ))
 
 for _ in $(seq 1 "$COUNT"); do
     curl -fsS --max-time 5 "$@" "$BASE/$PREFIX/version" \
-        | sed -E 's/.*"track":"([^"]*)".*"version":"([^"]*)".*/version=\2 track=\1/; s/.*"version":"([^"]*)".*"track":"([^"]*)".*/version=\1 track=\2/' \
+        | python3 -c 'import json, sys; d = json.load(sys.stdin); print(f"version={d["version"]} track={d.get("track", "-")}")' \
         || echo "request failed"
 done | sort | uniq -c
