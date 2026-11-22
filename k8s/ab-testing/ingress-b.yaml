@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-b
+  namespace: aceest-ab
+  annotations:
+    # /ab/version -> /version inside the app
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    # A/B testing: users in group B (header X-User-Group: B, or cookie ab_group=always) get variant B.
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: X-User-Group
+    nginx.ingress.kubernetes.io/canary-by-header-value: B
+    nginx.ingress.kubernetes.io/canary-by-cookie: ab_group
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /ab(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: aceest-b
+                port:
+                  number: 80

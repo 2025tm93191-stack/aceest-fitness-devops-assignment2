@@ -1,0 +1,13 @@
+# One SQLite volume per strategy namespace, shared by every live track (stable/canary,
+# blue/green, A/B) so they all see the same clients. ReadWriteOnce works because Minikube
+# has a single node; on a multi-node cloud cluster use ReadWriteMany storage or Postgres.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aceest-data
+  namespace: __NAMESPACE__
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

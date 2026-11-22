@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-stable
+  namespace: aceest-canary
+  annotations:
+    # /canary/version -> /version inside the app
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /canary(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: aceest-stable
+                port:
+                  number: 80

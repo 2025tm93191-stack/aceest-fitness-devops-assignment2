@@ -1,0 +1,7 @@
+# Rendered by k8s/scripts/deploy.sh: __NAMESPACE__ becomes aceest-<strategy>.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __NAMESPACE__
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness

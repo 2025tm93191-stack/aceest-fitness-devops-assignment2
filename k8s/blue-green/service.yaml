@@ -1,0 +1,17 @@
+# Live service. Cut-over = patch selector.track to the other colour; rollback = patch it back.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest
+  namespace: aceest-blue-green
+  labels:
+    app: aceest
+spec:
+  type: ClusterIP
+  selector:
+    app: aceest
+    track: __LIVE_COLOR__
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
