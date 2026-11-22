@@ -87,7 +87,9 @@ for attempt in range(10):
         if attempt == 9:
             sys.exit(f"  {url}: unreachable ({exc})")
         time.sleep(3)
-print(f"  {url}: status={health['status']} version={info['version']} track={info['track']} pod={info['hostname']}")
+# 'track' only exists from v2.0.0 on; older releases report version and hostname.
+print(f"  {url}: status={health['status']} version={info['version']} track={info.get('track', '-')} "
+      f"pod={info.get('hostname', '-')}")
 if health.get("status") != "ok":
     sys.exit("health check failed")
 if expected and info["version"] != expected:
