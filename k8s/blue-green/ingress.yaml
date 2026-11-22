@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest
+  namespace: aceest-blue-green
+  annotations:
+    # /blue-green/version -> /version inside the app
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /blue-green(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: aceest
+                port:
+                  number: 80

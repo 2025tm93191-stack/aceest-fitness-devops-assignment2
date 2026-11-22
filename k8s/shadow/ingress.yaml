@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest
+  namespace: aceest-shadow
+  annotations:
+    # /shadow/version -> /version inside the app
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /shadow(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: mirror-proxy
+                port:
+                  number: 80

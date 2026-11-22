@@ -1,0 +1,100 @@
+# Shadow deployment: an nginx proxy answers every request from the primary (live) version
+# and sends a copy to the shadow version. The shadow's responses are thrown away and it has
+# its own throwaway database, so users never see or depend on it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mirror-proxy
+  namespace: aceest-shadow
+data:
+  default.conf: |
+    # Named upstreams are resolved once at start-up, so no runtime DNS resolver is needed.
+    upstream aceest_primary {
+      server aceest-primary.aceest-shadow.svc.cluster.local:80;
+    }
+    upstream aceest_shadow {
+      server aceest-shadow.aceest-shadow.svc.cluster.local:80;
+    }
+    server {
+      listen 8080;
+      location / {
+        mirror /__shadow;
+        mirror_request_body on;
+        proxy_pass http://aceest_primary;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      }
+      location = /__shadow {
+        internal;
+        proxy_pass http://aceest_shadow$request_uri;
+        proxy_set_header X-Shadow-Request "true";
+        proxy_connect_timeout 1s;
+        proxy_read_timeout 3s;
+      }
+      location = /proxy-health {
+        return 200 "ok";
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mirror-proxy
+  namespace: aceest-shadow
+  labels:
+    app: mirror-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mirror-proxy
+  template:
+    metadata:
+      labels:
+        app: mirror-proxy
+      annotations:
+        config-version: "2"  # bump when default.conf changes so the proxy restarts
+    spec:
+      containers:
+        - name: nginx
+          image: nginxinc/nginx-unprivileged:1.27-alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /proxy-health
+              port: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: config
+          configMap:
+            name: mirror-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mirror-proxy
+  namespace: aceest-shadow
+spec:
+  selector:
+    app: mirror-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

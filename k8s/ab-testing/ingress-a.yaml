@@ -1,0 +1,22 @@
+# Default audience: variant A.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-a
+  namespace: aceest-ab
+  annotations:
+    # /ab/version -> /version inside the app
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /ab(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: aceest-a
+                port:
+                  number: 80
