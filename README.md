@@ -148,6 +148,9 @@ Every build produces an image tagged `<version>-b<build>` (immutable, used for d
 
 ### Jenkins Setup
 
+A complete walkthrough for a fresh Ubuntu VM (Docker, Minikube, SonarQube, Jenkins, every strategy, and the screenshots to take) is in [docs/BITS_VM_GUIDE.md](docs/BITS_VM_GUIDE.md).
+
+
 1. Plugins: **Pipeline**, **Git**, **JUnit**, **Credentials Binding**, **SonarQube Scanner**. The agent needs `python3`, `docker` and `kubectl` (add the `jenkins` user to the `docker` group).
 2. *Manage Jenkins → Tools*: add a SonarQube Scanner installation named `SonarScanner` (install automatically).
 3. *Manage Jenkins → System*: add a SonarQube server named `SonarQube` with its URL and a token credential.
